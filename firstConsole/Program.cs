@@ -1,20 +1,60 @@
-﻿Console.Clear();
+﻿using FluentValidation;
+using FluentValidation.Results;
+
+Console.Clear();
 Console.Write("Enter First Reading: ");
-var firstReadingValid = int.TryParse(Console.ReadLine(), out int firstReading) ;
+var firstReadingValid = int.TryParse(Console.ReadLine(), out int firstReading ) ;
 Console.WriteLine();
 Console.Write("Enter Second Reading: ");
 var secondReadingValid = int .TryParse( Console.ReadLine(), out int secondReading);
 
+var datecompareresult = DateTime.Parse("01/12/2026").ToUniversalTime().Date.CompareTo(DateTime.Now.ToUniversalTime().Date); 
+Console.WriteLine(datecompareresult.ToString());
+
 if (firstReadingValid && secondReadingValid)
 {
-    var firstPowerReading = new PowerReading { Reading =  firstReading, RecordedOn = DateTime.Parse("01/06/2025")};
-    var lastPowerReading = new PowerReading { Reading=  secondReading, RecordedOn = DateTime.Parse("01/12/2025")};
+    var firstPowerReading = new PowerReading { Reading = firstReading, RecordedOn = DateTime.Parse("01/06/2025") };
+    var lastPowerReading = new PowerReading { Reading = secondReading, RecordedOn = DateTime.Today };
 
-    Console.WriteLine($"Using PowerReading: { PowerReading.Usage(firstPowerReading, lastPowerReading)}");    
+    var validator = new PowerReadingValdiator();
+    var firstReadingIsValid = validator.Validate(firstPowerReading);
+    var secondReadingIsValid = validator.Validate(lastPowerReading);
+    
+    Console.WriteLine(lastPowerReading.RecordedOn);
+    if (firstReadingIsValid.IsValid && secondReadingIsValid.IsValid)
+        Console.WriteLine($"Using PowerReading: {PowerReading.Usage(firstPowerReading, lastPowerReading)}");
+    else
+    {
+        DisplayValidationErrors(firstReadingIsValid, secondReadingIsValid);
+    }
 }
 else
 {
-    Console.WriteLine("Invalid Readings submitted.");
+    Console.WriteLine("Readings must be integer.");
 }
 
+void DisplayValidationErrors(ValidationResult validationResult, ValidationResult secondReadingIsValid1)
+{
+    foreach (var validationFailure in validationResult.Errors)
+    {
+        Console.WriteLine(validationFailure.ErrorMessage);
+    }
 
+    foreach (var validationFailure in secondReadingIsValid1.Errors)
+    {
+        Console.WriteLine(validationFailure.ErrorMessage);
+    }
+}
+
+public class PowerReadingValdiator : AbstractValidator<PowerReading>
+{
+    public PowerReadingValdiator()
+    {
+        
+        RuleFor(r=>r.Reading).GreaterThan(0).WithMessage("Reading must be greater than zero.");
+        
+        RuleFor(r => r.RecordedOn.Date)
+            .LessThanOrEqualTo(DateTime.Today)
+            .WithMessage("RecordedOn must be less than or equal to today's date.");
+    }
+}
